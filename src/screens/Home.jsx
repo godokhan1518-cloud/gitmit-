@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, Upload } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { COLORS, displayFont, bodyFont } from "../theme";
 
-export default function Home({ session, onEditProfile }) {
+export default function Home({ session, onEditProfile, onUpload }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +31,7 @@ export default function Home({ session, onEditProfile }) {
       </p>
 
       {loading ? (
-        <p style={{ ...bodyFont, color: COLORS.muted }} className="text-sm">Loading your profile…</p>
+        <p style={{ ...bodyFont, color: COLORS.muted }} className="text-sm">Loading your profile...</p>
       ) : (
         <>
           <div
@@ -42,7 +42,7 @@ export default function Home({ session, onEditProfile }) {
               <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             ) : (
               <p style={{ ...displayFont, color: COLORS.muted }} className="text-2xl">
-                {(profile?.full_name || session.user.email)[0].toUpperCase()}
+                {profile?.full_name || session.user.email[0].toUpperCase()}
               </p>
             )}
           </div>
@@ -66,6 +66,15 @@ export default function Home({ session, onEditProfile }) {
       >
         <Settings size={16} />
         Edit profile
+      </button>
+
+      <button
+        onClick={onUpload}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-full mt-3"
+        style={{ ...bodyFont, background: COLORS.text, color: "#fff" }}
+      >
+        <Upload size={16} />
+        Video Upload
       </button>
 
       <button
