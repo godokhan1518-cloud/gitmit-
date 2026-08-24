@@ -13,7 +13,7 @@ export default function Feed({ onBack }) {
     const loadVideos = async () => {
       const { data, error } = await supabase
         .from("videos")
-        .select("id, video_url, caption, user_id, created_at, profiles:user_id (username, full_name, avatar_url)")
+        .select("id, video_url, caption, user_id, created_at")
         .order("created_at", { ascending: false });
 
       if (!error && data) setVideos(data);
@@ -121,7 +121,7 @@ export default function Feed({ onBack }) {
                 }}
               >
                 <p style={{ ...bodyFont, fontWeight: 700 }} className="mb-1">
-                  @{v.profiles?.username || v.profiles?.full_name || "user"}
+                  Video
                 </p>
                 {v.caption && (
                   <p style={{ ...bodyFont }} className="text-sm">
@@ -157,4 +157,4 @@ export default function Feed({ onBack }) {
       )}
     </div>
   );
-      }
+}
