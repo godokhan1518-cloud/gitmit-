@@ -3,12 +3,13 @@ import { supabase } from "./supabaseClient";
 import Auth from "./screens/Auth";
 import Home from "./screens/Home";
 import Profile from "./screens/Profile";
+import Upload from "./screens/Upload";
 import { COLORS, bodyFont } from "./theme";
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState("home"); // "home" | "profile"
+  const [screen, setScreen] = useState("home"); // "home" | "profile" | "upload"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,13 +29,15 @@ export default function App() {
       <div className="relative w-full h-full max-w-[420px] overflow-hidden" style={{ background: COLORS.bg }}>
         {loading ? (
           <div className="w-full h-full flex items-center justify-center">
-            <p style={{ ...bodyFont, color: COLORS.muted }}>Loading…</p>
+            <p style={{ ...bodyFont, color: COLORS.muted }}>Loading...</p>
           </div>
         ) : session ? (
           screen === "profile" ? (
             <Profile session={session} onBack={() => setScreen("home")} />
+          ) : screen === "upload" ? (
+            <Upload session={session} onBack={() => setScreen("home")} />
           ) : (
-            <Home session={session} onEditProfile={() => setScreen("profile")} />
+            <Home session={session} onEditProfile={() => setScreen("profile")} onUpload={() => setScreen("upload")} />
           )
         ) : (
           <Auth onAuthed={() => {}} />
