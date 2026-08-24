@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, Settings, Upload } from "lucide-react";
+import { LogOut, Settings, Upload, PlaySquare } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { COLORS, displayFont, bodyFont } from "../theme";
 
-export default function Home({ session, onEditProfile, onUpload }) {
+export default function Home({ session, onEditProfile, onUpload, onFeed }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,12 +60,12 @@ export default function Home({ session, onEditProfile, onUpload }) {
       )}
 
       <button
-        onClick={onEditProfile}
+        onClick={onFeed}
         className="flex items-center gap-2 px-5 py-2.5 rounded-full mt-4"
         style={{ ...bodyFont, background: COLORS.violet, color: "#fff" }}
       >
-        <Settings size={16} />
-        Edit profile
+        <PlaySquare size={16} />
+        Feed Dekhein
       </button>
 
       <button
@@ -75,6 +75,15 @@ export default function Home({ session, onEditProfile, onUpload }) {
       >
         <Upload size={16} />
         Video Upload
+      </button>
+
+      <button
+        onClick={onEditProfile}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-full mt-3"
+        style={{ ...bodyFont, background: COLORS.surface, color: COLORS.text, border: `1px solid ${COLORS.line}` }}
+      >
+        <Settings size={16} />
+        Edit profile
       </button>
 
       <button
