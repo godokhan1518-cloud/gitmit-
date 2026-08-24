@@ -4,12 +4,13 @@ import Auth from "./screens/Auth";
 import Home from "./screens/Home";
 import Profile from "./screens/Profile";
 import Upload from "./screens/Upload";
+import Feed from "./screens/Feed";
 import { COLORS, bodyFont } from "./theme";
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState("home"); // "home" | "profile" | "upload"
+  const [screen, setScreen] = useState("home"); // "home" | "profile" | "upload" | "feed"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,8 +37,15 @@ export default function App() {
             <Profile session={session} onBack={() => setScreen("home")} />
           ) : screen === "upload" ? (
             <Upload session={session} onBack={() => setScreen("home")} />
+          ) : screen === "feed" ? (
+            <Feed onBack={() => setScreen("home")} />
           ) : (
-            <Home session={session} onEditProfile={() => setScreen("profile")} onUpload={() => setScreen("upload")} />
+            <Home
+              session={session}
+              onEditProfile={() => setScreen("profile")}
+              onUpload={() => setScreen("upload")}
+              onFeed={() => setScreen("feed")}
+            />
           )
         ) : (
           <Auth onAuthed={() => {}} />
