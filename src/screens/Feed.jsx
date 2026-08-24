@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Heart, MessageCircle } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { COLORS, bodyFont } from "../theme";
+import CommentsModal from "./CommentsModal";
 
 export default function Feed({ session, onBack }) {
   const [videos, setVideos] = useState([]);
-  const [likes, setLikes] = useState({}); // { videoId: { count, likedByMe } }
+  const [likes, setLikes] = useState({});
   const [loading, setLoading] = useState(true);
+  const [commentsOpenFor, setCommentsOpenFor] = useState(null);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
 
@@ -104,7 +106,7 @@ export default function Feed({ session, onBack }) {
   };
 
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: "#000" }}>
+    <div className="w-full h-full flex flex-col" style={{ background: "#000", position: "relative" }}>
       <div
         style={{
           position: "absolute",
@@ -213,7 +215,10 @@ export default function Feed({ session, onBack }) {
                       {likeInfo.count}
                     </span>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}
+                    onClick={() => setCommentsOpenFor(v.id)}
+                  >
                     <MessageCircle size={28} />
                     <span style={{ ...bodyFont }} className="text-xs mt-1">Comment</span>
                   </div>
@@ -223,6 +228,14 @@ export default function Feed({ session, onBack }) {
           })}
         </div>
       )}
+
+      {commentsOpenFor && (
+        <CommentsModal
+          videoId={commentsOpenFor}
+          session={session}
+          onClose={() => setCommentsOpenFor(null)}
+        />
+      )}
     </div>
   );
-                     }
+                      }
