@@ -38,7 +38,7 @@ export default function App() {
           ) : screen === "upload" ? (
             <Upload session={session} onBack={() => setScreen("home")} />
           ) : screen === "feed" ? (
-            <Feed onBack={() => setScreen("home")} />
+            <Feed session={session} onBack={() => setScreen("home")} />
           ) : (
             <Home
               session={session}
