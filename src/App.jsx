@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Auth from "./screens/Auth";
 import Home from "./screens/Home";
+import Profile from "./screens/Profile";
 import { COLORS, bodyFont } from "./theme";
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [screen, setScreen] = useState("home"); // "home" | "profile"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,7 +31,11 @@ export default function App() {
             <p style={{ ...bodyFont, color: COLORS.muted }}>Loading…</p>
           </div>
         ) : session ? (
-          <Home session={session} />
+          screen === "profile" ? (
+            <Profile session={session} onBack={() => setScreen("home")} />
+          ) : (
+            <Home session={session} onEditProfile={() => setScreen("profile")} />
+          )
         ) : (
           <Auth onAuthed={() => {}} />
         )}
