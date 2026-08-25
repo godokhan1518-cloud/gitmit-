@@ -20,21 +20,25 @@ export default function Profile({ session, onBack }) {
         .from("profiles")
         .select("full_name, username, bio, avatar_url")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
+
       if (!error && data) {
         setFullName(data.full_name || "");
         setUsername(data.username || "");
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || null);
       }
+
       setLoading(false);
     };
+
     loadProfile();
   }, [session]);
 
   const handleAvatarUpload = async (e) => {
     setError("");
     setInfo("");
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -42,12 +46,14 @@ export default function Profile({ session, onBack }) {
       setError("Please choose an image file.");
       return;
     }
+
     if (file.size > 5 * 1024 * 1024) {
       setError("Image must be smaller than 5MB.");
       return;
     }
 
     setUploading(true);
+
     try {
       const fileExt = file.name.split(".").pop();
       const filePath = `${session.user.id}/avatar.${fileExt}`;
@@ -55,20 +61,20 @@ export default function Profile({ session, onBack }) {
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, { upsert: true });
+
       if (uploadError) throw uploadError;
 
       const { data: publicUrlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      // cache-bust so the new image shows immediately
       const freshUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       setAvatarUrl(freshUrl);
 
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ avatar_url: freshUrl })
-        .eq("id", session.user.id);
+        .upsert({ id: session.user.id, avatar_url: freshUrl });
+
       if (updateError) throw updateError;
 
       setInfo("Profile picture updated.");
@@ -87,6 +93,7 @@ export default function Profile({ session, onBack }) {
       setError("Full name can't be empty.");
       return;
     }
+
     if (!/^[a-zA-Z0-9_.]{3,20}$/.test(username)) {
       setError("Username must be 3-20 characters (letters, numbers, . or _).");
       return;
@@ -94,28 +101,29 @@ export default function Profile({ session, onBack }) {
 
     setSaving(true);
     try {
-      // if username changed, make sure it's not taken by someone else
       const { data: existing } = await supabase
         .from("profiles")
         .select("id")
         .eq("username", username.toLowerCase())
         .neq("id", session.user.id)
         .maybeSingle();
+
       if (existing) {
         setError("That username is already taken.");
         setSaving(false);
         return;
       }
 
-      const { error: updateError } = await supabase
+      const { error: upsertError } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+          id: session.user.id,
           full_name: fullName,
           username: username.toLowerCase(),
           bio,
-        })
-        .eq("id", session.user.id);
-      if (updateError) throw updateError;
+        });
+
+      if (upsertError) throw upsertError;
 
       setInfo("Profile saved.");
     } catch (err) {
@@ -128,7 +136,7 @@ export default function Profile({ session, onBack }) {
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center" style={{ background: COLORS.bg }}>
-        <p style={{ ...bodyFont, color: COLORS.muted }}>Loading…</p>
+        <p style={{ ...bodyFont, color: COLORS.muted }}>Loading...</p>
       </div>
     );
   }
@@ -168,7 +176,7 @@ export default function Profile({ session, onBack }) {
         </div>
         {uploading && (
           <p style={{ ...bodyFont, color: COLORS.muted }} className="text-xs mt-2">
-            Uploading…
+            Uploading...
           </p>
         )}
       </div>
@@ -218,10 +226,10 @@ export default function Profile({ session, onBack }) {
       <button
         onClick={handleSave}
         disabled={saving}
-        style={{ ...displayFont, background: COLORS.violet, color: "#fff", opacity: saving ? 0.6 : 1 }}
+        style={{ ...bodyFont, background: COLORS.violet, color: "#fff", opacity: saving ? 0.6 : 1 }}
         className="w-full py-3 rounded-full font-semibold text-sm"
       >
-        {saving ? "Saving…" : "Save changes"}
+        {saving ? "Saving..." : "Save changes"}
       </button>
     </div>
   );
