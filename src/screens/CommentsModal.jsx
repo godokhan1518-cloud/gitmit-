@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { X, Send } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { COLORS, bodyFont } from "../theme";
@@ -8,6 +8,7 @@ export default function CommentsModal({ videoId, session, onClose }) {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     const loadComments = async () => {
@@ -22,6 +23,14 @@ export default function CommentsModal({ videoId, session, onClose }) {
     };
     loadComments();
   }, [videoId]);
+
+  // Auto-focus input shortly after modal mounts (helps keyboard open reliably on mobile)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (inputRef.current) inputRef.current.focus();
+    }, 150);
+    return () => clearTimeout(t);
+  }, []);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -43,6 +52,8 @@ export default function CommentsModal({ videoId, session, onClose }) {
       setText("");
     }
     setSending(false);
+    // keep keyboard open for next comment
+    if (inputRef.current) inputRef.current.focus();
   };
 
   return (
@@ -51,9 +62,10 @@ export default function CommentsModal({ videoId, session, onClose }) {
         position: "absolute",
         inset: 0,
         background: "rgba(0,0,0,0.6)",
-        zIndex: 50,
+        zIndex: 999,
         display: "flex",
         alignItems: "flex-end",
+        touchAction: "none",
       }}
       onClick={onClose}
     >
@@ -66,8 +78,11 @@ export default function CommentsModal({ videoId, session, onClose }) {
           borderTopRightRadius: 16,
           display: "flex",
           flexDirection: "column",
+          touchAction: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         <div
           style={{
@@ -113,9 +128,11 @@ export default function CommentsModal({ videoId, session, onClose }) {
           }}
         >
           <input
+            ref={inputRef}
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={(e) => e.target.scrollIntoView({ block: "center" })}
             placeholder="Comment likhein..."
             style={{
               flex: 1,
@@ -124,6 +141,8 @@ export default function CommentsModal({ videoId, session, onClose }) {
               border: `1px solid ${COLORS.line}`,
               background: COLORS.surface,
               color: COLORS.text,
+              fontSize: 16,
+              touchAction: "manipulation",
               ...bodyFont,
             }}
           />
@@ -148,4 +167,4 @@ export default function CommentsModal({ videoId, session, onClose }) {
       </div>
     </div>
   );
-              }
+}
