@@ -4,9 +4,10 @@ import { supabase } from "../supabaseClient";
 import { COLORS, bodyFont } from "../theme";
 import CommentsModal from "./CommentsModal";
 
-export default function Feed({ session, onBack }) {
+export default function Feed({ session, onBack, onViewProfile }) {
   const [videos, setVideos] = useState([]);
   const [likes, setLikes] = useState({});
+  const [profiles, setProfiles] = useState({});
   const [loading, setLoading] = useState(true);
   const [commentsOpenFor, setCommentsOpenFor] = useState(null);
   const [muted, setMuted] = useState(true);
@@ -26,6 +27,18 @@ export default function Feed({ session, onBack }) {
       }
 
       setVideos(videoData);
+
+      const userIds = [...new Set(videoData.map((v) => v.user_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      const profileMap = {};
+      (profilesData || []).forEach((p) => {
+        profileMap[p.id] = p;
+      });
+      setProfiles(profileMap);
 
       const { data: likesData } = await supabase
         .from("likes")
@@ -78,7 +91,6 @@ export default function Feed({ session, onBack }) {
     return () => observer.disconnect();
   }, [videos]);
 
-  // keep all currently mounted videos in sync with the muted state
   useEffect(() => {
     Object.values(videoRefs.current).forEach((vid) => {
       if (vid) vid.muted = muted;
@@ -202,9 +214,14 @@ export default function Feed({ session, onBack }) {
                     color: "#fff",
                   }}
                 >
-                  <p style={{ ...bodyFont, fontWeight: 700 }} className="mb-1">
-                    Video
-                  </p>
+                  <div
+                    style={{ cursor: "pointer" }}
+                    onClick={() => onViewProfile && onViewProfile(v.user_id)}
+                  >
+                    <p style={{ ...bodyFont, fontWeight: 700 }} className="mb-1">
+                      @{profiles[v.user_id]?.username || "user"}
+                    </p>
+                  </div>
                   {v.caption && (
                     <p style={{ ...bodyFont }} className="text-sm">
                       {v.caption}
@@ -260,4 +277,4 @@ export default function Feed({ session, onBack }) {
       )}
     </div>
   );
-                                }
+                                             }
