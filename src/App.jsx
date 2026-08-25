@@ -5,12 +5,14 @@ import Home from "./screens/Home";
 import Profile from "./screens/Profile";
 import Upload from "./screens/Upload";
 import Feed from "./screens/Feed";
+import UserProfile from "./screens/UserProfile";
 import { COLORS, bodyFont } from "./theme";
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [screen, setScreen] = useState("home"); // "home" | "profile" | "upload" | "feed"
+  const [screen, setScreen] = useState("home"); // "home" | "profile" | "upload" | "feed" | "userProfile"
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -38,7 +40,20 @@ export default function App() {
           ) : screen === "upload" ? (
             <Upload session={session} onBack={() => setScreen("home")} />
           ) : screen === "feed" ? (
-            <Feed session={session} onBack={() => setScreen("home")} />
+            <Feed
+              session={session}
+              onBack={() => setScreen("home")}
+              onViewProfile={(userId) => {
+                setViewingUserId(userId);
+                setScreen("userProfile");
+              }}
+            />
+          ) : screen === "userProfile" ? (
+            <UserProfile
+              userId={viewingUserId}
+              session={session}
+              onBack={() => setScreen("feed")}
+            />
           ) : (
             <Home
               session={session}
