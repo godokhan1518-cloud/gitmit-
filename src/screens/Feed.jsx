@@ -13,6 +13,7 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
+  const currentPlayingId = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -71,17 +72,30 @@ export default function Feed({ session, onBack, onViewProfile }) {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        let bestEntry = null;
         entries.forEach((entry) => {
-          const vid = videoRefs.current[entry.target.dataset.id];
-          if (!vid) return;
           if (entry.isIntersecting) {
+            if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+              bestEntry = entry;
+            }
+          }
+        });
+
+        if (bestEntry) {
+          currentPlayingId.current = bestEntry.target.dataset.id;
+        }
+
+        Object.entries(videoRefs.current).forEach(([id, vid]) => {
+          if (!vid) return;
+          if (id === currentPlayingId.current) {
             vid.play().catch(() => {});
           } else {
             vid.pause();
+            vid.currentTime = 0;
           }
         });
       },
-      { threshold: 0.6 }
+      { threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
 
     Object.values(videoRefs.current).forEach((vid) => {
@@ -123,6 +137,13 @@ export default function Feed({ session, onBack, onViewProfile }) {
         user_id: session.user.id,
       });
     }
+  };
+
+  const handleVideoTap = (id) => (e) => {
+    if (id !== currentPlayingId.current) return;
+    const vid = e.target;
+    if (vid.paused) vid.play();
+    else vid.pause();
   };
 
   return (
@@ -199,10 +220,7 @@ export default function Feed({ session, onBack, onViewProfile }) {
                   playsInline
                   controls={false}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onClick={(e) => {
-                    if (e.target.paused) e.target.play();
-                    else e.target.pause();
-                  }}
+                  onClick={handleVideoTap(v.id)}
                 />
 
                 <div
@@ -277,4 +295,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-                                             }
+                    }
