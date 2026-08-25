@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Heart, MessageCircle } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { COLORS, bodyFont } from "../theme";
 import CommentsModal from "./CommentsModal";
@@ -9,6 +9,7 @@ export default function Feed({ session, onBack }) {
   const [likes, setLikes] = useState({});
   const [loading, setLoading] = useState(true);
   const [commentsOpenFor, setCommentsOpenFor] = useState(null);
+  const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
 
@@ -77,6 +78,13 @@ export default function Feed({ session, onBack }) {
     return () => observer.disconnect();
   }, [videos]);
 
+  // keep all currently mounted videos in sync with the muted state
+  useEffect(() => {
+    Object.values(videoRefs.current).forEach((vid) => {
+      if (vid) vid.muted = muted;
+    });
+  }, [muted, videos]);
+
   const toggleLike = async (videoId) => {
     if (!session?.user?.id) return;
     const current = likes[videoId] || { count: 0, likedByMe: false };
@@ -121,6 +129,20 @@ export default function Feed({ session, onBack }) {
         <ArrowLeft size={22} />
       </div>
 
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 10,
+          color: "#fff",
+          cursor: "pointer",
+        }}
+        onClick={() => setMuted((m) => !m)}
+      >
+        {muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+      </div>
+
       {loading ? (
         <div className="w-full h-full flex items-center justify-center">
           <p style={{ ...bodyFont, color: COLORS.muted }}>Loading feed...</p>
@@ -161,7 +183,7 @@ export default function Feed({ session, onBack }) {
                   ref={(el) => (videoRefs.current[v.id] = el)}
                   src={v.video_url}
                   loop
-                  muted
+                  muted={muted}
                   playsInline
                   controls={false}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -238,4 +260,4 @@ export default function Feed({ session, onBack }) {
       )}
     </div>
   );
-                      }
+                                }
