@@ -71,11 +71,28 @@ export default function Profile({ session, onBack }) {
       const freshUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
       setAvatarUrl(freshUrl);
 
+      // Preserve existing username/full_name so the NOT NULL constraint
+      // is never hit when only the avatar is being updated.
+      const safeUsername = username && username.trim() ? username.toLowerCase() : `user${session.user.id.slice(0, 8)}`;
+      const safeFullName = fullName && fullName.trim() ? fullName : "New user";
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .upsert({ id: session.user.id, avatar_url: freshUrl });
+        .upsert(
+          {
+            id: session.user.id,
+            full_name: safeFullName,
+            username: safeUsername,
+            bio,
+            avatar_url: freshUrl,
+          },
+          { onConflict: "id" }
+        );
 
       if (updateError) throw updateError;
+
+      if (!username) setUsername(safeUsername);
+      if (!fullName) setFullName(safeFullName);
 
       setInfo("Profile picture updated.");
     } catch (err) {
@@ -116,12 +133,16 @@ export default function Profile({ session, onBack }) {
 
       const { error: upsertError } = await supabase
         .from("profiles")
-        .upsert({
-          id: session.user.id,
-          full_name: fullName,
-          username: username.toLowerCase(),
-          bio,
-        });
+        .upsert(
+          {
+            id: session.user.id,
+            full_name: fullName,
+            username: username.toLowerCase(),
+            bio,
+            avatar_url: avatarUrl,
+          },
+          { onConflict: "id" }
+        );
 
       if (upsertError) throw upsertError;
 
@@ -153,25 +174,48 @@ export default function Profile({ session, onBack }) {
       </div>
 
       <div className="flex flex-col items-center mb-6">
-        <div className="relative">
+        <div style={{ position: "relative", width: 96, height: 96 }}>
           <div
-            className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center"
-            style={{ background: COLORS.surface2 }}
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: "50%",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: COLORS.surface2,
+            }}
           >
             {avatarUrl ? (
-              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              <img
+                src={avatarUrl}
+                alt="avatar"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
             ) : (
-              <p style={{ ...displayFont, color: COLORS.muted }} className="text-2xl">
+              <p style={{ ...displayFont, color: COLORS.muted, fontSize: 28 }}>
                 {fullName ? fullName[0].toUpperCase() : "?"}
               </p>
             )}
           </div>
           <label
-            className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
-            style={{ background: COLORS.violet }}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              background: COLORS.violet,
+            }}
           >
             <Camera size={14} color="#fff" />
-            <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+            <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
           </label>
         </div>
         {uploading && (
@@ -233,4 +277,4 @@ export default function Profile({ session, onBack }) {
       </button>
     </div>
   );
-}
+  }
