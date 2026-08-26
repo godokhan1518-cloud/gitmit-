@@ -13,7 +13,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
-  const activeIdRef = useRef(null);
   const rafRef = useRef(null);
 
   useEffect(() => {
@@ -68,23 +67,9 @@ export default function Feed({ session, onBack, onViewProfile }) {
     loadData();
   }, [session]);
 
-  const setActiveVideo = (id) => {
-    if (activeIdRef.current === id) return;
-    activeIdRef.current = id;
-
-    Object.entries(videoRefs.current).forEach(([vidId, vid]) => {
-      if (!vid) return;
-      if (vidId === id) {
-        vid.play().catch(() => {});
-      } else {
-        vid.pause();
-        vid.currentTime = 0;
-      }
-    });
-  };
-
-  // Figure out which video is most centered in the scroll container
-  const checkActiveVideo = () => {
+  // Force: only the closest-to-center video plays, every single video
+  // that is not the closest one gets explicitly paused every time we run.
+  const enforceActiveVideo = () => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -99,36 +84,47 @@ export default function Feed({ session, onBack, onViewProfile }) {
       const rect = vid.getBoundingClientRect();
       const vidCenter = rect.top + rect.height / 2;
       const distance = Math.abs(vidCenter - containerCenter);
-
       if (distance < closestDistance) {
         closestDistance = distance;
         closestId = id;
       }
     });
 
-    if (closestId) {
-      setActiveVideo(closestId);
-    }
+    Object.entries(videoRefs.current).forEach(([id, vid]) => {
+      if (!vid) return;
+      if (id === closestId) {
+        if (vid.paused) vid.play().catch(() => {});
+      } else {
+        if (!vid.paused) {
+          vid.pause();
+          vid.currentTime = 0;
+        }
+      }
+    });
   };
 
   useEffect(() => {
     if (!videos.length) return;
 
-    // initial check once refs are mounted
-    const initialTimeout = setTimeout(checkActiveVideo, 150);
+    const initialTimeout = setTimeout(enforceActiveVideo, 200);
 
     const container = containerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(checkActiveVideo);
+      rafRef.current = requestAnimationFrame(enforceActiveVideo);
     };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
 
+    // safety net: re-check periodically in case scroll snap settles
+    // without firing extra scroll events
+    const interval = setInterval(enforceActiveVideo, 700);
+
     return () => {
       clearTimeout(initialTimeout);
+      clearInterval(interval);
       container.removeEventListener("scroll", handleScroll);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
@@ -171,7 +167,14 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const handleVideoTap = (id) => (e) => {
     const vid = e.target;
     if (vid.paused) {
-      vid.play();
+      vid.play().catch(() => {});
+      Object.entries(videoRefs.current).forEach(([otherId, otherVid]) => {
+        if (!otherVid) return;
+        if (otherId !== String(id) && !otherVid.paused) {
+          otherVid.pause();
+          otherVid.currentTime = 0;
+        }
+      });
     } else {
       vid.pause();
     }
@@ -326,4 +329,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-      }
+  }
