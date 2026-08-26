@@ -13,6 +13,8 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
+  const activeIdRef = useRef(null);
+  const rafRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -66,53 +68,69 @@ export default function Feed({ session, onBack, onViewProfile }) {
     loadData();
   }, [session]);
 
-  const pauseAllExcept = (playingId) => {
-    Object.entries(videoRefs.current).forEach(([id, vid]) => {
+  const setActiveVideo = (id) => {
+    if (activeIdRef.current === id) return;
+    activeIdRef.current = id;
+
+    Object.entries(videoRefs.current).forEach(([vidId, vid]) => {
       if (!vid) return;
-      if (id !== playingId && !vid.paused) {
+      if (vidId === id) {
+        vid.play().catch(() => {});
+      } else {
         vid.pause();
         vid.currentTime = 0;
       }
     });
   };
 
+  // Figure out which video is most centered in the scroll container
+  const checkActiveVideo = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const containerCenter = containerRect.top + containerRect.height / 2;
+
+    let closestId = null;
+    let closestDistance = Infinity;
+
+    Object.entries(videoRefs.current).forEach(([id, vid]) => {
+      if (!vid) return;
+      const rect = vid.getBoundingClientRect();
+      const vidCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(vidCenter - containerCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestId = id;
+      }
+    });
+
+    if (closestId) {
+      setActiveVideo(closestId);
+    }
+  };
+
   useEffect(() => {
-    if (!videos.length || !containerRef.current) return;
+    if (!videos.length) return;
 
-    const setupTimeout = setTimeout(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            const id = entry.target.dataset.id;
-            const vid = videoRefs.current[id];
-            if (!vid) return;
+    // initial check once refs are mounted
+    const initialTimeout = setTimeout(checkActiveVideo, 150);
 
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-              vid.play().catch(() => {});
-              pauseAllExcept(id);
-            } else if (!entry.isIntersecting) {
-              vid.pause();
-            }
-          });
-        },
-        {
-          root: containerRef.current,
-          threshold: [0, 0.25, 0.5, 0.6, 0.75, 1],
-        }
-      );
+    const container = containerRef.current;
+    if (!container) return;
 
-      Object.values(videoRefs.current).forEach((vid) => {
-        if (vid) observer.observe(vid);
-      });
+    const handleScroll = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(checkActiveVideo);
+    };
 
-      containerRef.current.__observer = observer;
-    }, 100);
+    container.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
-      clearTimeout(setupTimeout);
-      if (containerRef.current?.__observer) {
-        containerRef.current.__observer.disconnect();
-      }
+      clearTimeout(initialTimeout);
+      container.removeEventListener("scroll", handleScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [videos]);
 
@@ -154,7 +172,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
     const vid = e.target;
     if (vid.paused) {
       vid.play();
-      pauseAllExcept(String(id));
     } else {
       vid.pause();
     }
@@ -309,4 +326,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-              }
+      }
