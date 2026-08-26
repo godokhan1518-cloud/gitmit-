@@ -13,7 +13,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
-  const ratiosRef = useRef({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -67,7 +66,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
     loadData();
   }, [session]);
 
-  // Whenever a video starts playing, pause every other video.
   const pauseAllExcept = (playingId) => {
     Object.entries(videoRefs.current).forEach(([id, vid]) => {
       if (!vid) return;
@@ -81,46 +79,39 @@ export default function Feed({ session, onBack, onViewProfile }) {
   useEffect(() => {
     if (!videos.length) return;
 
-    const applyBestPlayback = () => {
-      let bestId = null;
-      let bestRatio = 0;
-      Object.entries(ratiosRef.current).forEach(([id, ratio]) => {
-        if (ratio > bestRatio) {
-          bestRatio = ratio;
-          bestId = id;
-        }
+    // small delay so all <video> refs are mounted before we observe them
+    const setupTimeout = setTimeout(() => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const id = entry.target.dataset.id;
+            const vid = videoRefs.current[id];
+            if (!vid) return;
+
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+              vid.play().catch(() => {});
+              pauseAllExcept(id);
+            } else if (!entry.isIntersecting) {
+              vid.pause();
+            }
+          });
+        },
+        { threshold: [0, 0.25, 0.5, 0.6, 0.75, 1] }
+      );
+
+      Object.values(videoRefs.current).forEach((vid) => {
+        if (vid) observer.observe(vid);
       });
-      if (bestId) {
-        const vid = videoRefs.current[bestId];
-        if (vid && vid.paused) vid.play().catch(() => {});
-        pauseAllExcept(bestId);
+
+      containerRef.current.__observer = observer;
+    }, 100);
+
+    return () => {
+      clearTimeout(setupTimeout);
+      if (containerRef.current?.__observer) {
+        containerRef.current.__observer.disconnect();
       }
     };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          ratiosRef.current[entry.target.dataset.id] = entry.intersectionRatio;
-        });
-        applyBestPlayback();
-      },
-      { threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-
-    Object.values(videoRefs.current).forEach((vid) => {
-      if (vid) observer.observe(vid);
-    });
-
-    // play the first video immediately on first load
-    if (videos[0]) {
-      const firstVid = videoRefs.current[videos[0].id];
-      if (firstVid) {
-        firstVid.play().catch(() => {});
-        pauseAllExcept(String(videos[0].id));
-      }
-    }
-
-    return () => observer.disconnect();
   }, [videos]);
 
   useEffect(() => {
@@ -165,10 +156,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
     } else {
       vid.pause();
     }
-  };
-
-  const handleVideoPlay = (id) => () => {
-    pauseAllExcept(String(id));
   };
 
   return (
@@ -244,7 +231,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
                   muted={muted}
                   playsInline
                   controls={false}
-                  onPlay={handleVideoPlay(v.id)}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   onClick={handleVideoTap(v.id)}
                 />
@@ -321,4 +307,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-}
+    }
