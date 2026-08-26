@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Heart, MessageCircle, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "../supabaseClient";
-import { COLORS, bodyFont } from "../theme";
+import { COLORS, bodyFont, displayFont } from "../theme";
 import CommentsModal from "./CommentsModal";
 
 export default function Feed({ session, onBack, onViewProfile }) {
@@ -67,8 +67,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
     loadData();
   }, [session]);
 
-  // Force: only the closest-to-center video plays, every single video
-  // that is not the closest one gets explicitly paused every time we run.
   const enforceActiveVideo = () => {
     const container = containerRef.current;
     if (!container) return;
@@ -118,8 +116,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
 
     container.addEventListener("scroll", handleScroll, { passive: true });
 
-    // safety net: re-check periodically in case scroll snap settles
-    // without firing extra scroll events
     const interval = setInterval(enforceActiveVideo, 700);
 
     return () => {
@@ -185,29 +181,36 @@ export default function Feed({ session, onBack, onViewProfile }) {
       <div
         style={{
           position: "absolute",
-          top: 12,
-          left: 12,
+          top: 0,
+          left: 0,
+          right: 0,
           zIndex: 10,
-          color: "#fff",
-          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 12px",
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)",
         }}
-        onClick={onBack}
       >
-        <ArrowLeft size={22} />
-      </div>
+        <div style={{ color: "#fff", cursor: "pointer" }} onClick={onBack}>
+          <ArrowLeft size={22} />
+        </div>
 
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 10,
-          color: "#fff",
-          cursor: "pointer",
-        }}
-        onClick={() => setMuted((m) => !m)}
-      >
-        {muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+        <p
+          style={{
+            ...displayFont,
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 18,
+            letterSpacing: 1,
+          }}
+        >
+          gitmit
+        </p>
+
+        <div style={{ color: "#fff", cursor: "pointer" }} onClick={() => setMuted((m) => !m)}>
+          {muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+        </div>
       </div>
 
       {loading ? (
@@ -329,4 +332,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-  }
+      }
