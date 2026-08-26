@@ -13,7 +13,6 @@ export default function Feed({ session, onBack, onViewProfile }) {
   const [muted, setMuted] = useState(true);
   const containerRef = useRef(null);
   const videoRefs = useRef({});
-  const currentPlayingId = useRef(null);
   const ratiosRef = useRef({});
 
   useEffect(() => {
@@ -68,11 +67,21 @@ export default function Feed({ session, onBack, onViewProfile }) {
     loadData();
   }, [session]);
 
+  // Whenever a video starts playing, pause every other video.
+  const pauseAllExcept = (playingId) => {
+    Object.entries(videoRefs.current).forEach(([id, vid]) => {
+      if (!vid) return;
+      if (id !== playingId && !vid.paused) {
+        vid.pause();
+        vid.currentTime = 0;
+      }
+    });
+  };
+
   useEffect(() => {
     if (!videos.length) return;
 
-    const applyPlayback = () => {
-      // pick the id with the highest known intersection ratio
+    const applyBestPlayback = () => {
       let bestId = null;
       let bestRatio = 0;
       Object.entries(ratiosRef.current).forEach(([id, ratio]) => {
@@ -81,20 +90,11 @@ export default function Feed({ session, onBack, onViewProfile }) {
           bestId = id;
         }
       });
-
       if (bestId) {
-        currentPlayingId.current = bestId;
+        const vid = videoRefs.current[bestId];
+        if (vid && vid.paused) vid.play().catch(() => {});
+        pauseAllExcept(bestId);
       }
-
-      Object.entries(videoRefs.current).forEach(([id, vid]) => {
-        if (!vid) return;
-        if (id === currentPlayingId.current) {
-          vid.play().catch(() => {});
-        } else if (!vid.paused) {
-          vid.pause();
-          vid.currentTime = 0;
-        }
-      });
     };
 
     const observer = new IntersectionObserver(
@@ -102,7 +102,7 @@ export default function Feed({ session, onBack, onViewProfile }) {
         entries.forEach((entry) => {
           ratiosRef.current[entry.target.dataset.id] = entry.intersectionRatio;
         });
-        applyPlayback();
+        applyBestPlayback();
       },
       { threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
@@ -111,11 +111,13 @@ export default function Feed({ session, onBack, onViewProfile }) {
       if (vid) observer.observe(vid);
     });
 
-    // Fallback: if nothing has intersection data yet (first paint), play the first video
-    if (!currentPlayingId.current && videos[0]) {
-      currentPlayingId.current = String(videos[0].id);
+    // play the first video immediately on first load
+    if (videos[0]) {
       const firstVid = videoRefs.current[videos[0].id];
-      if (firstVid) firstVid.play().catch(() => {});
+      if (firstVid) {
+        firstVid.play().catch(() => {});
+        pauseAllExcept(String(videos[0].id));
+      }
     }
 
     return () => observer.disconnect();
@@ -157,8 +159,16 @@ export default function Feed({ session, onBack, onViewProfile }) {
 
   const handleVideoTap = (id) => (e) => {
     const vid = e.target;
-    if (vid.paused) vid.play();
-    else vid.pause();
+    if (vid.paused) {
+      vid.play();
+      pauseAllExcept(String(id));
+    } else {
+      vid.pause();
+    }
+  };
+
+  const handleVideoPlay = (id) => () => {
+    pauseAllExcept(String(id));
   };
 
   return (
@@ -234,6 +244,7 @@ export default function Feed({ session, onBack, onViewProfile }) {
                   muted={muted}
                   playsInline
                   controls={false}
+                  onPlay={handleVideoPlay(v.id)}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   onClick={handleVideoTap(v.id)}
                 />
@@ -310,4 +321,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-          }
+}
