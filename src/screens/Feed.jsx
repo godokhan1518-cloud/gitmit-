@@ -77,9 +77,8 @@ export default function Feed({ session, onBack, onViewProfile }) {
   };
 
   useEffect(() => {
-    if (!videos.length) return;
+    if (!videos.length || !containerRef.current) return;
 
-    // small delay so all <video> refs are mounted before we observe them
     const setupTimeout = setTimeout(() => {
       const observer = new IntersectionObserver(
         (entries) => {
@@ -96,7 +95,10 @@ export default function Feed({ session, onBack, onViewProfile }) {
             }
           });
         },
-        { threshold: [0, 0.25, 0.5, 0.6, 0.75, 1] }
+        {
+          root: containerRef.current,
+          threshold: [0, 0.25, 0.5, 0.6, 0.75, 1],
+        }
       );
 
       Object.values(videoRefs.current).forEach((vid) => {
@@ -307,4 +309,4 @@ export default function Feed({ session, onBack, onViewProfile }) {
       )}
     </div>
   );
-    }
+              }
